@@ -1250,7 +1250,7 @@
 
   // Push one atomic commit containing every changed file.
   // files: [{ path, content }]  (text content, stored UTF-8)
-  async function pushCommit(cfg, files, message) {
+  async function pushCommitOnce(cfg, files, message) {
     if (!cfg.token) { const e = new Error('GitHub token required to save from the browser'); e.status = 401; throw e; }
 
     // 1. current branch head + its tree
@@ -1290,7 +1290,24 @@
     return { commitSha: commit.sha, files: blobs.map(b => b.path) };
   }
 
+  // Two tabs/devices (or a file upload + body push) can race: the branch head
+  // moves between reading it and patching the ref, and GitHub rejects the
+  // update with 422 "not a fast forward". Rebuild the commit once on the new
+  // head — the operations are idempotent merges, so this is always safe.
+  async function pushCommit(cfg, files, message) {
+    try {
+      return await pushCommitOnce(cfg, files, message);
+    } catch (e) {
+      if (e && e.status === 422 && /fast.?forward/i.test(e.message || '')) {
+        return await pushCommitOnce(cfg, files, message);
+      }
+      throw e;
+    }
+  }
+
   // High-level: store a raw file (+ optional workout record) and refresh the index.
+  // Byte-identical re-uploads dedupe by content-hash id and commit nothing;
+  // an unchanged record also commits nothing (no empty commits).
   async function uploadFile(cfg, { fileName, content, source, dateLocal, type, record }) {
     if (!validCfg(cfg)) throw new Error('GitHub repo not configured');
     const idx = await fetchFileIndex(cfg);
@@ -1308,21 +1325,27 @@
       storedAt: new Date().toISOString()
     };
     const pos = idx.files.findIndex(f => (f.path.split('/').pop().split('__')[0]) === meta.id);  // dedupe by content-hash id (same rule as the ingest Action)
-    if (pos >= 0) idx.files[pos] = meta; else idx.files.push(meta);
+    const fileNew = pos < 0;
+    if (fileNew) idx.files.push(meta);
 
-    const toCommit = [
-      { path: path, content: String(content) },
-      { path: 'data/files/index.json', content: JSON.stringify(idx, null, 2) + '\n' }
-    ];
+    const toCommit = [];
+    if (fileNew) {
+      toCommit.push({ path: path, content: String(content) });
+      toCommit.push({ path: 'data/files/index.json', content: JSON.stringify(idx, null, 2) + '\n' });
+    }
     if (record) {
       const runs = await fetchRuns(cfg);
       const rp = runs.findIndex(x => x.id === record.id);
-      if (rp >= 0) runs[rp] = record; else runs.push(record);
-      runs.sort((a, b) => new Date(a.date) - new Date(b.date));
-      toCommit.push({ path: 'data/runs.json', content: JSON.stringify(runs, null, 2) + '\n' });
+      const recordChanged = rp < 0 || JSON.stringify(runs[rp]) !== JSON.stringify(record);
+      if (recordChanged) {
+        if (rp >= 0) runs[rp] = record; else runs.push(record);
+        runs.sort((a, b) => new Date(a.date) - new Date(b.date));
+        toCommit.push({ path: 'data/runs.json', content: JSON.stringify(runs, null, 2) + '\n' });
+      }
     }
+    if (!toCommit.length) return { file: pos >= 0 ? idx.files[pos] : meta, commit: null, deduped: true };
     const res = await pushCommit(cfg, toCommit, 'ta-hub: save ' + fileName);
-    return { file: meta, commit: res.commitSha };
+    return { file: meta, commit: res.commitSha, deduped: false };
   }
 
   return {
@@ -1961,12 +1984,15 @@
     const rows = pendingBodyRows;
     const { added, updated } = mergeBodyRows(rows);
     pendingBodyRows = null;
-    // store the ORIGINAL CSV in the cloud file database (best effort)
-    if (pendingBodyRaw) {
-      saveFileToCloud(pendingBodyRaw, isoDate(rows[rows.length - 1].date), 'InBody');
-      pendingBodyRaw = null;
-    }
-    pushBodyToCloud();
+    // Store the ORIGINAL CSV in the cloud file database first, THEN push the
+    // body measurements — sequentially, never in parallel: both create git
+    // commits and two concurrent pushes from the same head make one lose
+    // with a 422 "not a fast forward" (the CSV silently never landed).
+    const csvUpload = pendingBodyRaw
+      ? saveFileToCloud(pendingBodyRaw, isoDate(rows[rows.length - 1].date), 'InBody')
+      : Promise.resolve();
+    pendingBodyRaw = null;
+    Promise.resolve(csvUpload).then(pushBodyToCloud);
     el('bodyParsePreview').classList.add('hidden');
     el('bodyFile').value = '';
     refreshAll();
@@ -2056,20 +2082,22 @@
   // GitHub mode: one commit with raw file + index (+ workout record when given).
   // API mode:    POST /api/files (Drive backup included). Never blocks local saves.
   function saveFileToCloud(raw, dateYyyyMmDd, type, record) {
-    if (!raw || !raw.text) return;
+    if (!raw || !raw.text) return Promise.resolve();
     // Canonical stored name from the date INSIDE the file content (e.g. an
     // emailed attachment named 6a87983bac77866a575aaed0.json with an inside
     // date of 2026-08-21 stores as suunto-21-08-2026.json).
     const storedName = GH.canonicalFileName(raw.name, raw.dateLocal || dateYyyyMmDd);
     if (cloudMode() === 'github') {
-      if (!ghCfg.token) { console.warn('[cloud] GitHub mode without token — file kept locally only'); return; }
-      GH.uploadFile(ghCfg, { fileName: storedName, content: raw.text, source: 'manual-ui', dateLocal: dateYyyyMmDd, type: type, record: record || null })
-        .then(() => { toast('🐙 File saved to your GitHub database'); if (el('tab-files') && !document.getElementById('tab-files').classList.contains('hidden')) renderFiles(); })
+      if (!ghCfg.token) { console.warn('[cloud] GitHub mode without token — file kept locally only'); return Promise.resolve(); }
+      return GH.uploadFile(ghCfg, { fileName: storedName, content: raw.text, source: 'manual-ui', dateLocal: dateYyyyMmDd, type: type, record: record || null })
+        .then(j => {
+          toast(j && j.deduped ? '📄 File already in your GitHub database ✓' : '🐙 File saved to your GitHub database');
+          if (el('tab-files') && !document.getElementById('tab-files').classList.contains('hidden')) renderFiles();
+        })
         .catch(err => { console.warn('[cloud] GitHub save failed (data still local):', err.message); toast('GitHub save failed: ' + err.message, false); });
-      return;
     }
-    if (cloudSyncAvailable === false) return;
-    fetch('/api/files', {
+    if (cloudSyncAvailable === false) return Promise.resolve();
+    return fetch('/api/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fileName: storedName, content: raw.text, date: dateYyyyMmDd, type: type, source: 'manual-ui' })
@@ -2099,6 +2127,7 @@
     if (cloudMode() === 'github') {
       // GitHub IS the database: pull everything, merge, then push back any
       // record that exists only on THIS device so every device converges.
+      // Runs first, then body — sequential pushes, never concurrent git updates.
       GH.fetchRuns(ghCfg)
         .then(remote => {
           const { merged, localOnly } = GH.mergeWithRemote(remote, trainingLog);
@@ -2114,19 +2143,19 @@
               if (manual) toast(`${localOnly.length} run${localOnly.length > 1 ? 's' : ''} on this device not pushed — add a token in ⑦ settings`, false);
               return;
             }
-            GH.pushCommit(ghCfg, [{ path: 'data/runs.json', content: JSON.stringify(merged, null, 2) + '\n' }],
+            return GH.pushCommit(ghCfg, [{ path: 'data/runs.json', content: JSON.stringify(merged, null, 2) + '\n' }],
               'ta-hub: push ' + localOnly.length + ' run' + (localOnly.length > 1 ? 's' : '') + ' from device')
               .then(() => toast(`⬆️ Pushed ${localOnly.length} local run${localOnly.length > 1 ? 's' : ''} to GitHub`))
               .catch(err => { console.warn('[sync] push:', err.message); toast('GitHub push failed: ' + err.message, false); });
           }
         })
-        .catch(err => { if (manual) toast('GitHub sync failed: ' + err.message, false); else console.warn('[sync] github:', err.message); });
-      GH.fetchBodyLog(ghCfg)                                   // ③ Body tab data too
-        .then(remote => {
-          if (remote.length) { const r = mergeBodyRows(remote); if (r.added) refreshAll(); }
-          pushBodyToCloud();
-        })
-        .catch(err => console.warn('[sync] body:', err.message));
+        .catch(err => { if (manual) toast('GitHub sync failed: ' + err.message, false); else console.warn('[sync] github:', err.message); })
+        .then(() => GH.fetchBodyLog(ghCfg)                       // ③ Body tab data, after the runs push settled
+          .then(remote => {
+            if (remote.length) { const r = mergeBodyRows(remote); if (r.added) refreshAll(); }
+            pushBodyToCloud();
+          })
+          .catch(err => console.warn('[sync] body:', err.message)));
       return;
     }
     if (cloudSyncAvailable === false) return;
