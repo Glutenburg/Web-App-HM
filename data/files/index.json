@@ -35,6 +35,18 @@
       "type": "Long",
       "relatedRecordId": "mt5jeg8ah4rui",
       "storedAt": "2026-08-23T08:20:15.771Z"
+    },
+    {
+      "id": "f_uhlekp",
+      "path": "data/files/f_uhlekp__inbody-05-08-2026.csv",
+      "fileName": "inbody-05-08-2026.csv",
+      "ext": "csv",
+      "sizeBytes": 9003,
+      "source": "manual-ui",
+      "dateLocal": "2026-08-05",
+      "type": "InBody",
+      "relatedRecordId": null,
+      "storedAt": "2026-08-23T08:40:27.843Z"
     }
   ]
 }
