@@ -423,7 +423,7 @@
       <!-- Free cloud mode: your GitHub repo IS the database -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
         <h2 class="text-lg font-bold flex items-center gap-2">🐙 GitHub Free Cloud <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200 text-[10px] font-extrabold tracking-wide">100% FREE</span></h2>
-        <p class="text-sm text-gray-500 mt-1">Use your own GitHub repository as the workout + file database — no Vercel, no Upstash, no Google Cloud, no credit card. 🔄 Sync is two-way: it pulls everything from the repo <span class="font-semibold">and pushes runs saved only on this device</span>, so every phone/PC sees the same data. Email ingestion runs on free GitHub Actions. Full setup: <span class="font-semibold text-gray-700">DEPLOY-FREE.md</span>.</p>
+        <p class="text-sm text-gray-500 mt-1">Usually <span class="font-semibold">nothing to type here</span> — on GitHub Pages the site URL auto-connects every device (viewing + downloads work with no token; paste a token once per device — or once in the file, see EMBEDDED_GH_TOKEN in index.html — to also push). Manual entries below override the auto-detection. 🔄 Sync is two-way: it pulls everything from the repo <span class="font-semibold">and pushes runs saved only on this device</span>, so every phone/PC sees the same data. Email ingestion runs on free GitHub Actions. Full setup: <span class="font-semibold text-gray-700">DEPLOY-FREE.md</span>.</p>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <label class="block">GitHub owner / user
             <input id="ghOwner" type="text" placeholder="ta-coach" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
@@ -448,7 +448,7 @@
   </main>
 
   <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-gray-400">
-    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · GitHub-cloud sync · build <span id="appVersion">v7</span> · data lives in your browser LocalStorage + your GitHub repo
+    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · GitHub-cloud sync · build <span id="appVersion">v8</span> · data lives in your browser LocalStorage + your GitHub repo
   </footer>
 
   <!-- Toasts -->
@@ -1139,6 +1139,17 @@
 
   const validCfg = cfg => !!(cfg && cfg.owner && cfg.repo);
 
+  // Zero-setup config: on GitHub Pages the deployment URL itself names the
+  // repo — https://<owner>.github.io/<repo>/. Every device therefore connects
+  // automatically with nothing to type. Returns null elsewhere (localhost,
+  // file://, custom domains) so nothing is ever misdetected.
+  const parseGhHostInfo = (hostname, pathname) => {
+    const m = /^([a-z0-9-]+)\.github\.io$/i.exec(String(hostname || ''));
+    if (!m) return null;
+    const seg = String(pathname || '').split('/').filter(Boolean)[0];
+    return { owner: m[1], repo: seg ? decodeURIComponent(seg) : String(hostname), branch: DEFAULT_BRANCH };
+  };
+
   // ---------- network client ----------
 
   async function ghFetch(cfg, url, opts) {
@@ -1364,7 +1375,7 @@
 
   return {
     DEFAULT_BRANCH, safeName, contentHashB64, filePathFor, canonicalFileName, mergeWithRemote, buildCommitPayload,
-    rawUrl, apiUrl, jsdUrl, validCfg,
+    rawUrl, apiUrl, jsdUrl, validCfg, parseGhHostInfo,
     fetchRuns, fetchBodyLog, fetchFileIndex, fetchFileBlob, pushCommit, queuedPush, uploadFile
   };
 });
@@ -2060,8 +2071,27 @@
   let ghCfg = null;                 // { owner, repo, branch, token }
   let cloudSyncAvailable = null;    // API-mode probe result (null = unknown)
 
+  /* ---------- Zero-setup cloud connection ----------
+     Nothing to type in ⑦: on GitHub Pages the site URL itself names the repo
+     (https://glutenburg.github.io/Web-App-HM/ -> owner Glutenburg, repo
+     Web-App-HM), so EVERY device auto-connects and syncs on first open.
+     Pull (view data, Files tab, downloads) works with no token at all.
+     To also PUSH from every device with zero typing, paste a fine-grained
+     PAT here once and re-upload this file. WARNING: a token pasted here is
+     readable by anyone who can open this page — use a fine-grained token
+     scoped to ONLY this repository with ONLY "Contents: Read and write",
+     so the worst case is a stranger editing workout data in this one repo.
+     Leave it empty ('') for automatic read-only sync everywhere. */
+  const EMBEDDED_GH_TOKEN = '';
+
   const loadGhCfg = () => {
     try { ghCfg = JSON.parse(localStorage.getItem('ghCfg') || 'null') || null; } catch { ghCfg = null; }
+    if (!ghCfg && window.TaHubGitHub) {
+      try {
+        const auto = GH.parseGhHostInfo(location.hostname, location.pathname);
+        if (auto) ghCfg = Object.assign(auto, { token: EMBEDDED_GH_TOKEN || null, auto: true });
+      } catch { /* location unavailable — no auto-detect */ }
+    }
     if (ghCfg && !ghCfg.branch) ghCfg.branch = 'main';
     return ghCfg;
   };
@@ -2087,9 +2117,10 @@
   function updateGhStatus() {
     const s = el('ghStatus');
     if (!ghCfg || !ghCfg.owner) { s.textContent = ''; return; }
+    const auto = ghCfg.auto ? ' · auto-connected from this site\'s URL' : '';
     s.innerHTML = ghCfg.token
-      ? `✅ repo <b>${esc(ghCfg.owner)}/${esc(ghCfg.repo)}</b> · sync + push enabled`
-      : `✅ repo <b>${esc(ghCfg.owner)}/${esc(ghCfg.repo)}</b> · sync + downloads (add a token to push manual uploads)`;
+      ? `✅ repo <b>${esc(ghCfg.owner)}/${esc(ghCfg.repo)}</b> · sync + push enabled${auto}`
+      : `✅ repo <b>${esc(ghCfg.owner)}/${esc(ghCfg.repo)}</b> · sync + downloads (add a token to push manual uploads)${auto}`;
   }
 
   // Best-effort cloud save of an original uploaded file.
