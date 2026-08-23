@@ -47,6 +47,18 @@
       "type": "InBody",
       "relatedRecordId": null,
       "storedAt": "2026-08-23T08:40:27.843Z"
+    },
+    {
+      "id": "f_kfboqt",
+      "path": "data/files/f_kfboqt__inbody-06-07-2026.csv",
+      "fileName": "inbody-06-07-2026.csv",
+      "ext": "csv",
+      "sizeBytes": 993,
+      "source": "manual-ui",
+      "dateLocal": "2026-07-06",
+      "type": "InBody",
+      "relatedRecordId": null,
+      "storedAt": "2026-08-23T08:50:56.543Z"
     }
   ]
 }
