@@ -1308,6 +1308,17 @@
     }
   }
 
+  // EVERY push from this page funnels through one queue: rapid-fire saves
+  // (uploading several files in a row) can never overlap each other's branch
+  // update, so they cannot collide with themselves. Retries above handle
+  // collisions with OTHER devices.
+  let pushQueueTail = Promise.resolve();
+  function queuedPush(cfg, files, message) {
+    const job = pushQueueTail.then(() => pushCommit(cfg, files, message));
+    pushQueueTail = job.then(() => {}, () => {});   // keep the queue alive after failures
+    return job;
+  }
+
   // High-level: store a raw file (+ optional workout record) and refresh the index.
   // Byte-identical re-uploads dedupe by content-hash id and commit nothing;
   // an unchanged record also commits nothing (no empty commits).
@@ -1347,14 +1358,14 @@
       }
     }
     if (!toCommit.length) return { file: pos >= 0 ? idx.files[pos] : meta, commit: null, deduped: true };
-    const res = await pushCommit(cfg, toCommit, 'ta-hub: save ' + fileName);
+    const res = await queuedPush(cfg, toCommit, 'ta-hub: save ' + fileName);
     return { file: meta, commit: res.commitSha, deduped: false };
   }
 
   return {
     DEFAULT_BRANCH, safeName, contentHashB64, filePathFor, canonicalFileName, mergeWithRemote, buildCommitPayload,
     rawUrl, apiUrl, jsdUrl, validCfg,
-    fetchRuns, fetchBodyLog, fetchFileIndex, fetchFileBlob, pushCommit, uploadFile
+    fetchRuns, fetchBodyLog, fetchFileIndex, fetchFileBlob, pushCommit, queuedPush, uploadFile
   };
 });
 /* =================== SHARED GITHUB CLIENT END =================== */
@@ -1977,7 +1988,7 @@
       .then(remote => {
         const { merged, localOnly } = GH.mergeWithRemote(remote, bodyLog);
         if (!localOnly.length) return;
-        return GH.pushCommit(ghCfg, [{ path: 'data/body.json', content: JSON.stringify(merged, null, 2) + '\n' }], 'ta-hub: sync body measurements');
+        return GH.queuedPush(ghCfg, [{ path: 'data/body.json', content: JSON.stringify(merged, null, 2) + '\n' }], 'ta-hub: sync body measurements');
       })
       .catch(err => console.warn('[cloud] body push skipped:', err.message));
   }
@@ -2150,7 +2161,7 @@
               if (manual) toast(`${localOnly.length} run${localOnly.length > 1 ? 's' : ''} on this device not pushed — add a token in ⑦ settings`, false);
               return;
             }
-            return GH.pushCommit(ghCfg, [{ path: 'data/runs.json', content: JSON.stringify(merged, null, 2) + '\n' }],
+            return GH.queuedPush(ghCfg, [{ path: 'data/runs.json', content: JSON.stringify(merged, null, 2) + '\n' }],
               'ta-hub: push ' + localOnly.length + ' run' + (localOnly.length > 1 ? 's' : '') + ' from device')
               .then(() => toast(`⬆️ Pushed ${localOnly.length} local run${localOnly.length > 1 ? 's' : ''} to GitHub`))
               .catch(err => { console.warn('[sync] push:', err.message); toast('GitHub push failed: ' + err.message, false); });
