@@ -448,7 +448,7 @@
   </main>
 
   <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-gray-400">
-    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · 100% frontend · data lives in your browser LocalStorage
+    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · GitHub-cloud sync · build <span id="appVersion">v7</span> · data lives in your browser LocalStorage + your GitHub repo
   </footer>
 
   <!-- Toasts -->
@@ -1290,18 +1290,21 @@
     return { commitSha: commit.sha, files: blobs.map(b => b.path) };
   }
 
-  // Two tabs/devices (or a file upload + body push) can race: the branch head
-  // moves between reading it and patching the ref, and GitHub rejects the
-  // update with 422 "not a fast forward". Rebuild the commit once on the new
-  // head — the operations are idempotent merges, so this is always safe.
+  // Two tabs/devices can race: the branch head moves between reading it and
+  // patching the ref, and GitHub rejects the update with 422. Rebuild the
+  // commit on the fresh head — up to 3 attempts with a short backoff, since
+  // the operations are idempotent merges this is always safe.
   async function pushCommit(cfg, files, message) {
-    try {
-      return await pushCommitOnce(cfg, files, message);
-    } catch (e) {
-      if (e && e.status === 422 && /fast.?forward/i.test(e.message || '')) {
+    for (let attempt = 1; ; attempt++) {
+      try {
         return await pushCommitOnce(cfg, files, message);
+      } catch (e) {
+        if (e && e.status === 422 && attempt < 3) {
+          await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+          continue;
+        }
+        throw e;
       }
-      throw e;
     }
   }
 
@@ -2123,7 +2126,11 @@
     else if (manual) toast('Already up to date');
   }
 
+  let syncInFlight = false;   // boot sync + 5-min poll + manual clicks must never overlap: overlapping pushes from one device race their own git updates
   function syncFromCloud(manual) {
+    if (syncInFlight) return;
+    syncInFlight = true;
+    const finish = () => { syncInFlight = false; };
     if (cloudMode() === 'github') {
       // GitHub IS the database: pull everything, merge, then push back any
       // record that exists only on THIS device so every device converges.
@@ -2155,10 +2162,11 @@
             if (remote.length) { const r = mergeBodyRows(remote); if (r.added) refreshAll(); }
             pushBodyToCloud();
           })
-          .catch(err => console.warn('[sync] body:', err.message)));
+          .catch(err => console.warn('[sync] body:', err.message)))
+        .then(finish, finish);
       return;
     }
-    if (cloudSyncAvailable === false) return;
+    if (cloudSyncAvailable === false) { finish(); return; }
     fetch('/api/runs')
       .then(r => {
         if (r.status === 404) { cloudSyncAvailable = false; return null; }   // static hosting — no backend
@@ -2171,7 +2179,8 @@
         cloudSyncAvailable = false;
         if (manual) toast('Cloud sync unavailable on this host', false);
         else console.warn('[sync] unavailable:', err.message);
-      });
+      })
+      .then(finish, finish);
   }
 
   /* ---------- ⑦ Files tab: cloud file storage ---------- */
