@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "id": "f_10b42b",
+      "path": "data/files/f_10b42b__InBody-25690822.csv",
+      "fileName": "InBody-25690822.csv",
+      "ext": "csv",
+      "sizeBytes": 991,
+      "source": "manual-ui",
+      "dateLocal": "2026-08-22",
+      "type": "InBody",
+      "relatedRecordId": null,
+      "storedAt": "2026-08-23T02:49:05.858Z"
+    }
+  ]
+}
