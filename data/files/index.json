@@ -11,6 +11,18 @@
       "type": "InBody",
       "relatedRecordId": null,
       "storedAt": "2026-08-23T09:13:24.659Z"
+    },
+    {
+      "id": "f_9ed1yx",
+      "path": "data/files/f_9ed1yx__suunto-16-08-2026.json",
+      "fileName": "suunto-16-08-2026.json",
+      "ext": "json",
+      "sizeBytes": 6513973,
+      "source": "manual-ui",
+      "dateLocal": "2026-08-16",
+      "type": "Long",
+      "relatedRecordId": "mt5lmngz72mae",
+      "storedAt": "2026-08-23T09:22:38.060Z"
     }
   ]
 }
