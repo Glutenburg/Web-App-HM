@@ -19,6 +19,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: { primary: '#fc5200', dark: '#1b1b1b' },
@@ -28,16 +29,37 @@
     };
   </script>
 
+  <!-- Apply the saved/system theme BEFORE first paint (no flash) -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) { }
+    })();
+  </script>
+
   <style>
     body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+    html.dark { color-scheme: dark; }   /* native inputs, selects, date pickers, scrollbars */
     /* Keep Leaflet panes below the sticky header / nav */
     .map-wrap { position: relative; z-index: 0; }
     #aiPrompt::-webkit-scrollbar, #weekPreview::-webkit-scrollbar { height: 8px; width: 8px; }
     #aiPrompt::-webkit-scrollbar-thumb, #weekPreview::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    /* Mobile: hide the tab-strip scrollbar + keep iOS from zooming on input focus */
+    #tabNav ::-webkit-scrollbar { display: none; }
+    #tabNav { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+    /* Dark mode for map popups + attribution */
+    html.dark .leaflet-popup-content-wrapper, html.dark .leaflet-popup-tip { background: #1a1b1f; color: #e5e7eb; }
+    html.dark .leaflet-container a { color: #fdba74; }
+    html.dark .leaflet-control-attribution { background: rgba(15,16,19,.8) !important; color: #6b7280 !important; }
   </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen text-gray-900">
+<body class="bg-gray-100 dark:bg-[#0f1013] min-h-screen text-gray-900 dark:text-white">
 
   <!-- ============ STICKY HEADER ============ -->
   <header class="sticky top-0 z-[1000] bg-[#1b1b1c] text-white shadow-lg">
@@ -51,25 +73,26 @@
         </div>
         <div>
           <h1 class="text-xl font-extrabold leading-none tracking-tight">TA HUB</h1>
-          <p class="text-[10px] font-semibold tracking-[0.22em] text-gray-400 mt-0.5">COACH TA PRO RUN HUB</p>
+          <p class="text-[10px] font-semibold tracking-[0.22em] text-gray-400 dark:text-gray-500 mt-0.5">COACH TA PRO RUN HUB</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div id="headerStats" class="text-xs font-semibold text-gray-400 tracking-wide"></div>
+      <div class="flex items-center gap-2 sm:gap-3">
+        <div id="headerStats" class="hidden sm:block text-xs font-semibold text-gray-400 tracking-wide"></div>
+        <button id="themeToggleBtn" title="Toggle dark / light mode" aria-label="Toggle dark mode" class="w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-base leading-none transition-colors">🌙</button>
         <button id="syncCloudBtn" title="Pull runs ingested from the email webhook" class="hidden px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors">🔄 Sync</button>
       </div>
     </div>
 
     <!-- ============ STICKY TAB NAV ============ -->
-    <nav id="tabNav" class="bg-white border-b border-gray-200 shadow-sm" aria-label="Main tabs">
+    <nav id="tabNav" class="bg-white dark:bg-[#1a1b1f] border-b border-gray-200 dark:border-white/10 shadow-sm" aria-label="Main tabs">
       <div class="max-w-7xl mx-auto px-2 sm:px-6 flex overflow-x-auto whitespace-nowrap">
-        <button data-tab="upload"   class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">① Upload</button>
-        <button data-tab="analysis" class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">② Run Analysis</button>
-        <button data-tab="body"     class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">③ Body</button>
-        <button data-tab="history"  class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">④ History</button>
-        <button data-tab="weekly"   class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">⑤ Weekly Export</button>
-        <button data-tab="prompt"   class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">⑥ AI Prompt Builder</button>
-        <button data-tab="files"    class="tab-btn px-4 py-3.5 text-sm font-semibold border-b-2 transition-colors">⑦ Files</button>
+        <button data-tab="upload"   class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">① Upload</button>
+        <button data-tab="analysis" class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">② Run Analysis</button>
+        <button data-tab="body"     class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">③ Body</button>
+        <button data-tab="history"  class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">④ History</button>
+        <button data-tab="weekly"   class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">⑤ Weekly Export</button>
+        <button data-tab="prompt"   class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">⑥ AI Prompt Builder</button>
+        <button data-tab="files"    class="tab-btn px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-semibold border-b-2 transition-colors">⑦ Files</button>
       </div>
     </nav>
   </header>
@@ -79,39 +102,39 @@
     <!-- ============ TAB 1 : UPLOAD ============ -->
     <section id="tab-upload">
       <div class="grid gap-6 lg:grid-cols-3">
-        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="lg:col-span-2 bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <h2 class="text-lg font-bold flex items-center gap-2">📤 Upload Workout Data</h2>
-          <p class="text-sm text-gray-500 mt-1">Drop a Suunto <span class="font-semibold text-gray-700">.json</span> export or a workout summary <span class="font-semibold text-gray-700">.md</span> file. Metrics are extracted automatically.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Drop a Suunto <span class="font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">.json</span> export or a workout summary <span class="font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">.md</span> file. Metrics are extracted automatically.</p>
 
-          <div id="dropzone" class="mt-5 border-2 border-dashed border-gray-300 rounded-2xl px-6 py-12 text-center cursor-pointer transition-colors hover:border-primary hover:bg-orange-50/50">
+          <div id="dropzone" class="mt-5 border-2 border-dashed border-gray-300 dark:border-white/15 rounded-2xl px-4 sm:px-6 py-10 sm:py-12 text-center cursor-pointer transition-colors hover:border-primary hover:bg-orange-50/50 dark:hover:bg-orange-500/10">
             <input id="fileInput" type="file" class="hidden" accept=".json,.md,.txt,.csv">
             <div class="text-4xl">🗂️</div>
-            <p class="mt-3 font-semibold text-gray-700">Drag &amp; drop your file here</p>
-            <p class="text-sm text-gray-400 mt-1">or <span class="text-primary font-semibold underline underline-offset-2">click to browse</span> — .json / .md · InBody .csv goes to ③ Body</p>
+            <p class="mt-3 font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">Drag &amp; drop your file here</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">or <span class="text-primary font-semibold underline underline-offset-2">click to browse</span> — .json / .md · InBody .csv goes to ③ Body</p>
           </div>
 
           <div class="mt-3 text-center">
-            <button id="manualEntryBtn" class="text-sm font-semibold text-gray-500 hover:text-primary transition-colors">✎ Or enter a run manually</button>
+            <button id="manualEntryBtn" class="text-sm font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-primary transition-colors">✎ Or enter a run manually</button>
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
-          <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">Auto unit conversion</h3>
-          <ul class="mt-4 space-y-3 text-sm text-gray-600">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Auto unit conversion</h3>
+          <ul class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300 dark:text-gray-600">
             <li class="flex gap-2"><span>❤️</span><span>HR stored in <b>Hz</b> → × 60 = <b>BPM</b></span></li>
             <li class="flex gap-2"><span>🌡️</span><span>Temperature in <b>Kelvin</b> → − 273.15 = <b>°C</b></span></li>
             <li class="flex gap-2"><span>🛰️</span><span>GPS in <b>radians</b> → degrees for the map</span></li>
             <li class="flex gap-2"><span>👟</span><span>Cadence <b>Hz</b> → steps/min (<b>spm</b>)</span></li>
             <li class="flex gap-2"><span>⏱️</span><span>Pace = duration ÷ distance → <b>MM:SS/km</b></span></li>
           </ul>
-          <p class="mt-4 text-xs text-gray-400 leading-relaxed">HR zones: Z2 140–150 · Z4 165–175 · Z5 175+ bpm. Everything stays in your browser (LocalStorage).</p>
+          <p class="mt-4 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">HR zones: Z2 140–150 · Z4 165–175 · Z5 175+ bpm. Everything stays in your browser (LocalStorage).</p>
         </div>
       </div>
 
       <!-- Extracted metrics / edit & save form -->
-      <div id="uploadFormCard" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+      <div id="uploadFormCard" class="hidden bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-          <h2 class="text-lg font-bold flex items-center gap-2">📋 Extracted Metrics <span id="upFileName" class="text-xs font-medium text-gray-400"></span></h2>
+          <h2 class="text-lg font-bold flex items-center gap-2">📋 Extracted Metrics <span id="upFileName" class="text-xs font-medium text-gray-400 dark:text-gray-500"></span></h2>
           <div class="flex gap-2 text-xs">
             <span id="upGpsChip" class="hidden px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200"></span>
             <span id="upHrChip" class="hidden px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 font-semibold border border-rose-200"></span>
@@ -120,62 +143,62 @@
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-5">
           <label class="block">Date
-            <input id="upDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Workout Type
-            <select id="upType" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm bg-white focus:ring-primary focus:border-primary">
+            <select id="upType" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm bg-white dark:bg-[#1a1b1f] focus:ring-primary focus:border-primary">
               <option>Easy</option><option>Tempo</option><option>Long</option><option>Hills</option><option>Gym</option>
             </select>
           </label>
           <label class="block">Distance (km)
-            <input id="upDistance" type="number" step="0.01" min="0" placeholder="e.g. 8.50" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upDistance" type="number" step="0.01" min="0" placeholder="e.g. 8.50" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Duration (e.g. 1:02:03)
-            <input id="upDuration" type="text" placeholder="1:02:03 or 62 min" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upDuration" type="text" placeholder="1:02:03 or 62 min" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Pace (auto)
-            <div id="upPace" class="mt-1 w-full rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-sm font-bold text-primary">—</div>
+            <div id="upPace" class="mt-1 w-full rounded-lg bg-gray-50 dark:bg-[#131419] border border-gray-200 dark:border-white/10 px-3 py-2 text-sm font-bold text-primary">—</div>
           </label>
           <label class="block">HR Avg (bpm)
-            <input id="upHrAvg" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upHrAvg" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">HR Max (bpm)
-            <input id="upHrMax" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upHrMax" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Cadence (spm)
-            <input id="upCadence" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upCadence" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Temp (°C)
-            <input id="upTemp" type="number" step="0.1" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upTemp" type="number" step="0.1" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Elevation Gain (m)
-            <input id="upAscent" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upAscent" type="number" min="0" placeholder="—" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block col-span-2">Note
-            <input id="upNote" type="text" placeholder="Felt strong, humid morning…" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="upNote" type="text" placeholder="Felt strong, humid morning…" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
         </div>
 
         <div class="flex gap-3 mt-6">
           <button id="saveRunBtn" class="px-5 py-2.5 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">💾 Save to Log</button>
-          <button id="clearUploadBtn" class="px-5 py-2.5 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-600 text-sm font-semibold transition-colors">Clear</button>
+          <button id="clearUploadBtn" class="px-5 py-2.5 rounded-lg border border-gray-300 dark:border-white/15 hover:bg-gray-50 dark:hover:bg-white/5 dark:bg-[#131419] text-gray-600 dark:text-gray-300 dark:text-gray-600 text-sm font-semibold transition-colors">Clear</button>
         </div>
       </div>
     </section>
 
     <!-- ============ TAB 2 : RUN ANALYSIS ============ -->
     <section id="tab-analysis" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-5">
+      <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-5">
         <div class="flex flex-wrap items-center gap-4">
-          <label for="analysisSelect" class="text-sm font-bold text-gray-700">🔍 Select a run</label>
-          <select id="analysisSelect" class="flex-1 min-w-[240px] rounded-lg border-gray-300 border px-3 py-2.5 text-sm bg-white focus:ring-primary focus:border-primary"></select>
+          <label for="analysisSelect" class="text-sm font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">🔍 Select a run</label>
+          <select id="analysisSelect" class="flex-1 min-w-[240px] rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2.5 text-sm bg-white dark:bg-[#1a1b1f] focus:ring-primary focus:border-primary"></select>
         </div>
       </div>
 
-      <div id="analysisEmpty" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200/70 p-14 text-center">
+      <div id="analysisEmpty" class="hidden bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-14 text-center">
         <div class="text-5xl">📊</div>
-        <p class="mt-4 font-bold text-gray-700">No runs saved yet</p>
-        <p class="text-sm text-gray-400 mt-1">Upload a workout in Tab ①, then come back to analyze it on the map.</p>
+        <p class="mt-4 font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">No runs saved yet</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Upload a workout in Tab ①, then come back to analyze it on the map.</p>
       </div>
 
       <div id="analysisContent" class="space-y-6">
@@ -183,35 +206,35 @@
         <div id="analysisMetrics" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3"></div>
 
         <!-- map -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-4 map-wrap">
-          <div id="runMap" class="h-[420px] rounded-xl bg-gray-100"></div>
-          <div id="mapOverlay" class="hidden absolute inset-4 rounded-xl bg-gray-50/95 border border-dashed border-gray-300 flex flex-col items-center justify-center text-center z-[500]">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 map-wrap">
+          <div id="runMap" class="h-[420px] rounded-xl bg-gray-100 dark:bg-white/10"></div>
+          <div id="mapOverlay" class="hidden absolute inset-4 rounded-xl bg-gray-50/95 dark:bg-[#131419]/95 border border-dashed border-gray-300 dark:border-white/15 flex flex-col items-center justify-center text-center z-[500]">
             <div class="text-4xl">🗺️</div>
-            <p class="mt-3 font-bold text-gray-600">No GPS track for this run</p>
-            <p class="text-xs text-gray-400 mt-1 max-w-xs">Upload a Suunto .json containing Latitude / Longitude samples to draw the route here.</p>
+            <p class="mt-3 font-bold text-gray-600 dark:text-gray-300 dark:text-gray-600">No GPS track for this run</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs">Upload a Suunto .json containing Latitude / Longitude samples to draw the route here.</p>
           </div>
         </div>
 
         <!-- zones -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <div class="flex items-center justify-between flex-wrap gap-2">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">HR Zones Distribution</h3>
-            <span class="text-[11px] font-semibold text-gray-400">Z2 140–150 · Z4 165–175 · Z5 175+ bpm</span>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">HR Zones Distribution</h3>
+            <span class="text-[11px] font-semibold text-gray-400 dark:text-gray-500">Z2 140–150 · Z4 165–175 · Z5 175+ bpm</span>
           </div>
           <div id="zoneChart" class="mt-4 space-y-3"></div>
-          <p id="zoneNote" class="mt-4 text-xs text-gray-400"></p>
+          <p id="zoneNote" class="mt-4 text-xs text-gray-400 dark:text-gray-500"></p>
         </div>
       </div>
     </section>
 
     <!-- ============ TAB 4 : HISTORY ============ -->
     <section id="tab-history" class="hidden">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+      <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-lg font-bold">📓 Training Log</h2>
           <div class="flex gap-2">
-            <button id="backupBtn" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">⬇ Backup</button>
-            <button id="restoreBtn" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">⬆ Restore</button>
+            <button id="backupBtn" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-white/15 hover:bg-gray-50 dark:hover:bg-white/5 dark:bg-[#131419] text-gray-700 dark:text-gray-300 dark:text-gray-600 text-sm font-semibold transition-colors">⬇ Backup</button>
+            <button id="restoreBtn" class="px-4 py-2 rounded-lg border border-gray-300 dark:border-white/15 hover:bg-gray-50 dark:hover:bg-white/5 dark:bg-[#131419] text-gray-700 dark:text-gray-300 dark:text-gray-600 text-sm font-semibold transition-colors">⬆ Restore</button>
             <input id="restoreInput" type="file" accept=".json" class="hidden">
           </div>
         </div>
@@ -219,7 +242,7 @@
         <div class="overflow-x-auto mt-4 -mx-2 px-2">
           <table class="w-full text-sm min-w-[860px]">
             <thead>
-              <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400">
+              <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 <th class="py-2 pr-4 font-semibold">Date</th>
                 <th class="py-2 pr-4 font-semibold">Type</th>
                 <th class="py-2 pr-4 font-semibold">Dist (km)</th>
@@ -233,7 +256,7 @@
             <tbody id="historyBody"></tbody>
           </table>
         </div>
-        <p class="mt-3 text-xs text-gray-400">Backup exports everything (runs + body measurements + coach analyses) to a .json file · Restore merges a backup file back in.</p>
+        <p class="mt-3 text-xs text-gray-400 dark:text-gray-500">Backup exports everything (runs + body measurements + coach analyses) to a .json file · Restore merges a backup file back in.</p>
       </div>
     </section>
 
@@ -241,26 +264,26 @@
     <section id="tab-body" class="hidden space-y-6">
       <div class="grid gap-6 lg:grid-cols-2 items-start">
         <!-- InBody CSV upload -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <h2 class="text-lg font-bold flex items-center gap-2">⚖️ InBody Upload</h2>
-          <p class="text-sm text-gray-500 mt-1">Drop an InBody results export <span class="font-semibold text-gray-700">.csv</span>. Weight, muscle mass, fat mass, BMI, visceral fat and segmental values are extracted automatically (<code class="text-xs bg-gray-100 px-1 rounded">-</code> = not measured).</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Drop an InBody results export <span class="font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">.csv</span>. Weight, muscle mass, fat mass, BMI, visceral fat and segmental values are extracted automatically (<code class="text-xs bg-gray-100 dark:bg-white/10 px-1 rounded">-</code> = not measured).</p>
 
-          <div id="bodyDrop" class="mt-5 border-2 border-dashed border-gray-300 rounded-2xl px-6 py-10 text-center cursor-pointer transition-colors hover:border-primary hover:bg-orange-50/50">
+          <div id="bodyDrop" class="mt-5 border-2 border-dashed border-gray-300 dark:border-white/15 rounded-2xl px-6 py-10 text-center cursor-pointer transition-colors hover:border-primary hover:bg-orange-50/50 dark:hover:bg-orange-500/10">
             <input id="bodyFile" type="file" class="hidden" accept=".csv,.txt">
             <div class="text-4xl">📋</div>
-            <p class="mt-3 font-semibold text-gray-700">Drag &amp; drop your InBody CSV here</p>
-            <p class="text-sm text-gray-400 mt-1">or <span class="text-primary font-semibold underline underline-offset-2">click to browse</span> — multi-row history files OK</p>
+            <p class="mt-3 font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">Drag &amp; drop your InBody CSV here</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">or <span class="text-primary font-semibold underline underline-offset-2">click to browse</span> — multi-row history files OK</p>
           </div>
 
           <div id="bodyParsePreview" class="hidden mt-4">
             <div class="flex items-center justify-between flex-wrap gap-2">
-              <h3 class="text-sm font-bold text-gray-700">Parsed measurements <span id="bodyParseName" class="text-xs font-medium text-gray-400"></span></h3>
+              <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">Parsed measurements <span id="bodyParseName" class="text-xs font-medium text-gray-400 dark:text-gray-500"></span></h3>
               <button id="bodySaveParsedBtn" class="px-4 py-2 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">💾 Save Measurements</button>
             </div>
             <div class="overflow-x-auto mt-3 -mx-2 px-2">
               <table class="w-full text-sm min-w-[560px]">
                 <thead>
-                  <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400">
+                  <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     <th class="py-2 pr-4 font-semibold">Date</th><th class="py-2 pr-4 font-semibold">Weight</th><th class="py-2 pr-4 font-semibold">Muscle</th><th class="py-2 pr-4 font-semibold">Fat</th><th class="py-2 pr-4 font-semibold">PBF</th><th class="py-2 font-semibold">BMI</th>
                   </tr>
                 </thead>
@@ -271,49 +294,49 @@
         </div>
 
         <!-- Manual body entry -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <h2 class="text-lg font-bold flex items-center gap-2">✎ Manual Entry</h2>
-          <p class="text-sm text-gray-500 mt-1">Log a quick weigh-in or scale result — only the date and weight are required.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Log a quick weigh-in or scale result — only the date and weight are required.</p>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
             <label class="block">Date
-              <input id="bdDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Weight (kg) *
-              <input id="bdWeight" type="number" step="0.1" min="0" placeholder="98.2" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdWeight" type="number" step="0.1" min="0" placeholder="98.2" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Skeletal Muscle (kg)
-              <input id="bdSmm" type="number" step="0.1" min="0" placeholder="44.8" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdSmm" type="number" step="0.1" min="0" placeholder="44.8" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Body Fat Mass (kg)
-              <input id="bdBfm" type="number" step="0.1" min="0" placeholder="20.4" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdBfm" type="number" step="0.1" min="0" placeholder="20.4" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Body Fat (%)
-              <input id="bdPbf" type="number" step="0.1" min="0" placeholder="20.8" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdPbf" type="number" step="0.1" min="0" placeholder="20.8" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">BMI
-              <input id="bdBmi" type="number" step="0.1" min="0" placeholder="31.0" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdBmi" type="number" step="0.1" min="0" placeholder="31.0" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Visceral Fat Level
-              <input id="bdVfl" type="number" step="1" min="0" placeholder="8" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdVfl" type="number" step="1" min="0" placeholder="8" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">BMR (kcal)
-              <input id="bdBmr" type="number" step="1" min="0" placeholder="2050" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdBmr" type="number" step="1" min="0" placeholder="2050" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">InBody Score
-              <input id="bdScore" type="number" step="1" min="0" placeholder="92" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdScore" type="number" step="1" min="0" placeholder="92" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block col-span-2 md:col-span-3">Note
-              <input id="bdNote" type="text" placeholder="Morning scan, fasted…" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="bdNote" type="text" placeholder="Morning scan, fasted…" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
           </div>
           <button id="bodyManualSaveBtn" class="mt-4 px-5 py-2.5 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">💾 Save Measurement</button>
         </div>
       </div>
 
-      <div id="bodyEmpty" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200/70 p-14 text-center">
+      <div id="bodyEmpty" class="hidden bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-14 text-center">
         <div class="text-5xl">⚖️</div>
-        <p class="mt-4 font-bold text-gray-700">No body measurements yet</p>
-        <p class="text-sm text-gray-400 mt-1">Upload an InBody .csv or add a manual entry above to start tracking body composition.</p>
+        <p class="mt-4 font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">No body measurements yet</p>
+        <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Upload an InBody .csv or add a manual entry above to start tracking body composition.</p>
       </div>
 
       <div id="bodyContent" class="space-y-6 hidden">
@@ -322,23 +345,23 @@
 
         <!-- segmental + trends -->
         <div class="grid gap-6 lg:grid-cols-2 items-start">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">Segmental Lean Mass <span class="normal-case tracking-normal text-gray-400 font-medium">(kg, latest scan)</span></h3>
+          <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Segmental Lean Mass <span class="normal-case tracking-normal text-gray-400 dark:text-gray-500 font-medium">(kg, latest scan)</span></h3>
             <div id="bodySegmental" class="mt-4 space-y-3"></div>
           </div>
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
-            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400">Body Composition Trends</h3>
+          <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Body Composition Trends</h3>
             <div id="bodyTrends" class="mt-2"></div>
           </div>
         </div>
 
         <!-- history -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <h2 class="text-lg font-bold">📓 Body Log</h2>
           <div class="overflow-x-auto mt-4 -mx-2 px-2">
             <table class="w-full text-sm min-w-[760px]">
               <thead>
-                <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400">
+                <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   <th class="py-2 pr-4 font-semibold">Date</th>
                   <th class="py-2 pr-4 font-semibold">Weight</th>
                   <th class="py-2 pr-4 font-semibold">Muscle</th>
@@ -361,10 +384,10 @@
 
     <!-- ============ TAB 5 : WEEKLY EXPORT ============ -->
     <section id="tab-weekly" class="hidden">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
-        <h2 class="text-lg font-bold">📅 Weekly Export <span class="text-sm font-medium text-gray-400">(weeks start Monday)</span></h2>
+      <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
+        <h2 class="text-lg font-bold">📅 Weekly Export <span class="text-sm font-medium text-gray-400 dark:text-gray-500">(weeks start Monday)</span></h2>
         <div class="flex flex-wrap items-center gap-3 mt-4">
-          <select id="weekSelect" class="flex-1 min-w-[260px] rounded-lg border-gray-300 border px-3 py-2.5 text-sm bg-white focus:ring-primary focus:border-primary"></select>
+          <select id="weekSelect" class="flex-1 min-w-[260px] rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2.5 text-sm bg-white dark:bg-[#1a1b1f] focus:ring-primary focus:border-primary"></select>
           <button id="weekDownloadBtn" class="px-5 py-2.5 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">⬇ Download .md</button>
         </div>
         <pre id="weekPreview" class="mt-4 bg-[#1b1b1c] text-orange-100 font-mono text-xs leading-relaxed p-4 rounded-xl overflow-x-auto min-h-[120px]"></pre>
@@ -375,22 +398,22 @@
     <section id="tab-prompt" class="hidden">
       <div class="grid gap-6 lg:grid-cols-2 items-start">
         <!-- Vault -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <h2 class="text-lg font-bold">🧠 Coach Detailed Analysis Vault</h2>
-          <p class="text-sm text-gray-500 mt-1">Paste the AI coach's deep analysis for a session — store the full detail, not just a one-liner.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Paste the AI coach's deep analysis for a session — store the full detail, not just a one-liner.</p>
 
           <div class="grid grid-cols-2 gap-4 mt-4">
             <label class="block">Date
-              <input id="vaultDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+              <input id="vaultDate" type="date" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
             </label>
             <label class="block">Session Type
-              <select id="vaultType" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm bg-white focus:ring-primary focus:border-primary">
+              <select id="vaultType" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm bg-white dark:bg-[#1a1b1f] focus:ring-primary focus:border-primary">
                 <option>Easy</option><option>Tempo</option><option>Long</option><option>Hills</option><option>Gym</option>
               </select>
             </label>
           </div>
           <label class="block mt-4">Coach Detailed Analysis
-            <textarea id="vaultText" rows="6" placeholder="e.g. Wk6 Tempo: Pace 7:00/km too fast (Z5). HR Avg 167, Max 181. HR Lag observed. Recovery 60s too short. Next time cap pace at 7:20/km and extend recovery to 90s." class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm leading-relaxed focus:ring-primary focus:border-primary"></textarea>
+            <textarea id="vaultText" rows="6" placeholder="e.g. Wk6 Tempo: Pace 7:00/km too fast (Z5). HR Avg 167, Max 181. HR Lag observed. Recovery 60s too short. Next time cap pace at 7:20/km and extend recovery to 90s." class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm leading-relaxed focus:ring-primary focus:border-primary"></textarea>
           </label>
           <button id="vaultSaveBtn" class="mt-4 px-5 py-2.5 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">💾 Save Analysis</button>
 
@@ -398,57 +421,57 @@
         </div>
 
         <!-- Prompt output -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+        <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <h2 class="text-lg font-bold">🤖 AI Coach Prompt</h2>
             <button id="copyPromptBtn" class="px-4 py-2 rounded-lg bg-[#1b1b1c] hover:bg-black text-white text-sm font-bold transition-colors">📋 Copy Prompt</button>
           </div>
-          <p class="text-sm text-gray-500 mt-1">Auto-combines your full workout history + body composition + every detailed coach analysis. Paste it straight into your AI coach chat.</p>
-          <textarea id="aiPrompt" readonly rows="18" class="mt-4 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 font-mono text-xs leading-relaxed text-gray-800 resize-y"></textarea>
+          <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Auto-combines your full workout history + body composition + every detailed coach analysis. Paste it straight into your AI coach chat.</p>
+          <textarea id="aiPrompt" readonly rows="18" class="mt-4 w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#131419] px-3 py-3 font-mono text-xs leading-relaxed text-gray-800 dark:text-gray-100 resize-y"></textarea>
         </div>
       </div>
     </section>
 
     <!-- ============ TAB 7 : FILES (cloud file storage) ============ -->
     <section id="tab-files" class="hidden space-y-6">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+      <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold">🗂️ Cloud File Storage</h2>
           <button id="filesRefreshBtn" class="px-4 py-2 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">🔄 Refresh</button>
         </div>
-        <p class="text-sm text-gray-500 mt-1">Every file you upload (Suunto <span class="font-semibold">.json</span>, workout summary <span class="font-semibold">.md</span>, InBody <span class="font-semibold">.csv</span>) — and every email attachment ingested by the webhook — is stored byte-for-byte in the cloud file database and can be downloaded again here.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Every file you upload (Suunto <span class="font-semibold">.json</span>, workout summary <span class="font-semibold">.md</span>, InBody <span class="font-semibold">.csv</span>) — and every email attachment ingested by the webhook — is stored byte-for-byte in the cloud file database and can be downloaded again here.</p>
         <div id="filesBox" class="mt-5"></div>
       </div>
 
       <!-- Free cloud mode: your GitHub repo IS the database -->
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200/70 p-6">
+      <div class="bg-white dark:bg-[#1a1b1f] dark:bg-[#1a1b1f] rounded-2xl shadow-sm border border-gray-200/70 dark:border-white/10 p-4 sm:p-6">
         <h2 class="text-lg font-bold flex items-center gap-2">🐙 GitHub Free Cloud <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200 text-[10px] font-extrabold tracking-wide">100% FREE</span></h2>
-        <p class="text-sm text-gray-500 mt-1">Usually <span class="font-semibold">nothing to type here</span> — on GitHub Pages the site URL auto-connects every device (viewing + downloads work with no token; paste a token once per device — or once in the file, see EMBEDDED_GH_TOKEN in index.html — to also push). Manual entries below override the auto-detection. 🔄 Sync is two-way: it pulls everything from the repo <span class="font-semibold">and pushes runs saved only on this device</span>, so every phone/PC sees the same data. Email ingestion runs on free GitHub Actions. Full setup: <span class="font-semibold text-gray-700">DEPLOY-FREE.md</span>.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">Usually <span class="font-semibold">nothing to type here</span> — on GitHub Pages the site URL auto-connects every device (viewing + downloads work with no token; paste a token once per device — or once in the file, see EMBEDDED_GH_TOKEN in index.html — to also push). Manual entries below override the auto-detection. 🔄 Sync is two-way: it pulls everything from the repo <span class="font-semibold">and pushes runs saved only on this device</span>, so every phone/PC sees the same data. Email ingestion runs on free GitHub Actions. Full setup: <span class="font-semibold text-gray-700 dark:text-gray-300 dark:text-gray-600">DEPLOY-FREE.md</span>.</p>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <label class="block">GitHub owner / user
-            <input id="ghOwner" type="text" placeholder="ta-coach" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="ghOwner" type="text" placeholder="ta-coach" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Repository
-            <input id="ghRepo" type="text" placeholder="run-hub" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="ghRepo" type="text" placeholder="run-hub" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
           <label class="block">Branch
-            <input id="ghBranch" type="text" placeholder="main" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+            <input id="ghBranch" type="text" placeholder="main" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
-          <label class="block">Token <span class="text-[10px] text-gray-400">(optional¹)</span>
-            <input id="ghToken" type="password" placeholder="github_pat_…" class="mt-1 w-full rounded-lg border-gray-300 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+          <label class="block">Token <span class="text-[10px] text-gray-400 dark:text-gray-500">(optional¹)</span>
+            <input id="ghToken" type="password" placeholder="github_pat_…" class="mt-1 w-full rounded-lg border-gray-300 dark:border-white/15 border px-3 py-2 text-sm focus:ring-primary focus:border-primary">
           </label>
         </div>
-        <p class="text-[11px] text-gray-400 mt-2">¹ Public repos: no token needed for sync &amp; downloads. A fine-grained token (Contents → Read &amp; Write, this repo only) is needed to push manual uploads from the browser and for private repos. It stays in your browser's LocalStorage.</p>
+        <p class="text-[11px] text-gray-400 dark:text-gray-500 mt-2">¹ Public repos: no token needed for sync &amp; downloads. A fine-grained token (Contents → Read &amp; Write, this repo only) is needed to push manual uploads from the browser and for private repos. It stays in your browser's LocalStorage.</p>
         <div class="flex items-center gap-3 mt-3 flex-wrap">
           <button id="ghSettingsSaveBtn" class="px-5 py-2.5 rounded-lg bg-primary hover:bg-orange-600 text-white text-sm font-bold shadow-sm shadow-primary/30 transition-colors">💾 Save Cloud Settings</button>
-          <span id="ghStatus" class="text-xs font-semibold text-gray-400"></span>
+          <span id="ghStatus" class="text-xs font-semibold text-gray-400 dark:text-gray-500"></span>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-gray-400">
-    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · GitHub-cloud sync · build <span id="appVersion">v8</span> · data lives in your browser LocalStorage + your GitHub repo
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-8 text-center text-xs text-gray-400 dark:text-gray-500">
+    Coach Ta Pro Run Hub · Strava-inspired · Suunto + InBody parsing · GitHub-cloud sync · build <span id="appVersion">v9</span> · data lives in your browser LocalStorage + your GitHub repo
   </footer>
 
   <!-- Toasts -->
@@ -1399,7 +1422,7 @@
     Tempo: 'bg-red-100 text-red-700 border-red-200',
     Long:  'bg-blue-100 text-blue-700 border-blue-200',
     Hills: 'bg-purple-100 text-purple-700 border-purple-200',
-    Gym:   'bg-gray-200 text-gray-700 border-gray-300'
+    Gym:   'bg-gray-200 dark:bg-white/15 text-gray-700 dark:text-gray-300 dark:text-gray-600 border-gray-300 dark:border-white/15'
   };
 
   /* ---------- State ---------- */
@@ -1600,7 +1623,7 @@
     const wrap = el('zoneChart'), note = el('zoneNote');
     const res = zoneDistribution(run);
     if (!res) {
-      wrap.innerHTML = '<p class="text-sm text-gray-400 py-4">No heart-rate data recorded for this run — zone distribution cannot be computed.</p>';
+      wrap.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500 py-4">No heart-rate data recorded for this run — zone distribution cannot be computed.</p>';
       note.textContent = '';
       return;
     }
@@ -1610,12 +1633,12 @@
       return `<div class="flex items-center gap-3">
         <div class="w-32 shrink-0 flex items-baseline gap-1.5">
           <span class="font-extrabold text-sm" style="color:${z.color}">${z.name}</span>
-          <span class="text-[10px] text-gray-400">${z.range}</span>
+          <span class="text-[10px] text-gray-400 dark:text-gray-500">${z.range}</span>
         </div>
-        <div class="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+        <div class="flex-1 h-5 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
           <div class="h-full rounded-full transition-all duration-500" style="width:${width}%;background:${z.color}"></div>
         </div>
-        <div class="w-12 text-right text-sm font-bold text-gray-700">${(pct * 100).toFixed(0)}%</div>
+        <div class="w-12 text-right text-sm font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">${(pct * 100).toFixed(0)}%</div>
       </div>`;
     }).join('');
     note.textContent = res.mode === 'measured'
@@ -1641,14 +1664,14 @@
       ['Elevation Gain', run.ascentM != null ? run.ascentM + ' m' : '—']
     ];
     el('analysisMetrics').innerHTML = cards.map(([k, v]) =>
-      `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-         <p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">${k}</p>
-         <p class="mt-1.5 text-lg xl:text-xl font-extrabold text-gray-900">${v}</p>
+      `<div class="bg-white dark:bg-[#1a1b1f] rounded-xl border border-gray-100 dark:border-white/5 shadow-sm p-4">
+         <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold">${k}</p>
+         <p class="mt-1.5 text-lg xl:text-xl font-extrabold text-gray-900 dark:text-white">${v}</p>
        </div>`).join('');
 
     if (typeof L === 'undefined') {
       el('mapOverlay').classList.remove('hidden');
-      el('mapOverlay').innerHTML = '<p class="text-sm text-gray-500 px-6">Map library (Leaflet CDN) failed to load.</p>';
+      el('mapOverlay').innerHTML = '<p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 px-6">Map library (Leaflet CDN) failed to load.</p>';
     } else {
       drawTrack(run);
     }
@@ -1683,20 +1706,20 @@
     const tbody = el('historyBody');
     const rows = sortedRunsDesc();
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-12 text-center text-sm text-gray-400">No runs yet — upload a .json / .md file or add one manually in Tab ①.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">No runs yet — upload a .json / .md file or add one manually in Tab ①.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
-      <tr class="border-t border-gray-100 hover:bg-orange-50/40 transition-colors">
-        <td class="py-3 pr-4 whitespace-nowrap text-gray-700">${esc(fmtDateNice(r.date))}</td>
+      <tr class="border-t border-gray-100 dark:border-white/5 hover:bg-orange-50/40 dark:hover:bg-orange-500/10 transition-colors">
+        <td class="py-3 pr-4 whitespace-nowrap text-gray-700 dark:text-gray-300 dark:text-gray-600">${esc(fmtDateNice(r.date))}</td>
         <td class="py-3 pr-4">${typeBadge(r.type)}</td>
-        <td class="py-3 pr-4 font-bold text-gray-900">${r.distanceKm ? r.distanceKm.toFixed(2) : '—'}</td>
-        <td class="py-3 pr-4 text-gray-700">${fmtPacePerKm(r)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(r.hrAvg)} / ${fm(r.hrMax)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(r.tempC, 1)}°C</td>
-        <td class="py-3 pr-4 max-w-[220px] truncate text-gray-500" title="${esc(r.note)}">${esc(r.note || '—')}</td>
+        <td class="py-3 pr-4 font-bold text-gray-900 dark:text-white">${r.distanceKm ? r.distanceKm.toFixed(2) : '—'}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fmtPacePerKm(r)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(r.hrAvg)} / ${fm(r.hrMax)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(r.tempC, 1)}°C</td>
+        <td class="py-3 pr-4 max-w-[220px] truncate text-gray-500 dark:text-gray-400 dark:text-gray-500" title="${esc(r.note)}">${esc(r.note || '—')}</td>
         <td class="py-3 w-12">
-          <button data-del-run="${r.id}" title="Delete run" class="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors">🗑</button>
+          <button data-del-run="${r.id}" title="Delete run" class="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">🗑</button>
         </td>
       </tr>`).join('');
   }
@@ -1738,19 +1761,19 @@
     const list = el('vaultList');
     const items = [...detailedAnalysis].sort((a, b) => new Date(b.date) - new Date(a.date));
     if (!items.length) {
-      list.innerHTML = '<p class="text-sm text-gray-400 py-2">No detailed analyses saved yet.</p>';
+      list.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500 py-2">No detailed analyses saved yet.</p>';
       return;
     }
     list.innerHTML = items.map(a => `
-      <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/60">
+      <div class="border border-gray-200 dark:border-white/10 rounded-xl p-4 bg-gray-50/60 dark:bg-white/5">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-gray-800">${esc(isoDate(a.date))}</span>
+            <span class="text-sm font-bold text-gray-800 dark:text-gray-100">${esc(isoDate(a.date))}</span>
             ${typeBadge(a.type)}
           </div>
-          <button data-del-vault="${a.id}" title="Delete analysis" class="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors">🗑</button>
+          <button data-del-vault="${a.id}" title="Delete analysis" class="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">🗑</button>
         </div>
-        <p class="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-line">${esc(a.text)}</p>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 dark:text-gray-600 leading-relaxed whitespace-pre-line">${esc(a.text)}</p>
       </div>`).join('');
   }
 
@@ -1815,10 +1838,10 @@
   }
 
   function bodyCard(label, value, unit, sub, chip) {
-    return `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-400 font-bold">${label}</p>
-      <p class="mt-1.5 text-xl font-extrabold text-gray-900">${value === null ? '—' : value}<span class="text-xs font-bold text-gray-400 ml-1">${unit || ''}</span></p>
-      <p class="text-[10px] text-gray-400 mt-0.5">${sub || ''}</p>
+    return `<div class="bg-white dark:bg-[#1a1b1f] rounded-xl border border-gray-100 dark:border-white/5 shadow-sm p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-bold">${label}</p>
+      <p class="mt-1.5 text-xl font-extrabold text-gray-900 dark:text-white">${value === null ? '—' : value}<span class="text-xs font-bold text-gray-400 dark:text-gray-500 ml-1">${unit || ''}</span></p>
+      <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">${sub || ''}</p>
       ${chip ? `<div class="mt-1">${chip}</div>` : ''}
     </div>`;
   }
@@ -1849,7 +1872,7 @@
       ['Right Leg', b.leanRL, b.fatRL],
       ['Left Leg', b.leanLL, b.fatLL]
     ].filter(s => s[1] != null);
-    if (!segs.length) { box.innerHTML = '<p class="text-sm text-gray-400 py-2">No segmental data in the latest measurement (InBody scans include it).</p>'; return; }
+    if (!segs.length) { box.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500 py-2">No segmental data in the latest measurement (InBody scans include it).</p>'; return; }
     const max = Math.max(...segs.map(s => s[1]));
     const imb = (x, y) => (x == null || y == null) ? null : Math.abs(x - y) / ((x + y) / 2) * 100;
     const armImb = imb(b.leanRA, b.leanLA), legImb = imb(b.leanRL, b.leanLL);
@@ -1857,13 +1880,13 @@
       `<span class="px-2 py-1 rounded-full ${v > 10 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">${v > 10 ? '⚠' : '✓'} L/R imbalance ${v.toFixed(1)}%</span>`;
     box.innerHTML = segs.map(([name, lean, fat]) => `
       <div class="flex items-center gap-3">
-        <div class="w-20 shrink-0 text-xs font-semibold text-gray-500">${name}</div>
-        <div class="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
+        <div class="w-20 shrink-0 text-xs font-semibold text-gray-500 dark:text-gray-400 dark:text-gray-500">${name}</div>
+        <div class="flex-1 h-6 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
           <div class="h-full rounded-full bg-gradient-to-r from-orange-400 to-primary" style="width:${(lean / max * 100).toFixed(1)}%"></div>
         </div>
         <div class="w-28 text-right leading-tight">
-          <span class="text-sm font-bold text-gray-700">${lean.toFixed(1)} kg</span>
-          <span class="block text-[10px] text-gray-400">${fat != null ? 'fat ' + fat.toFixed(1) + ' kg' : ''}</span>
+          <span class="text-sm font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">${lean.toFixed(1)} kg</span>
+          <span class="block text-[10px] text-gray-400 dark:text-gray-500">${fat != null ? 'fat ' + fat.toFixed(1) + ' kg' : ''}</span>
         </div>
       </div>`).join('') +
       (armImb != null || legImb != null ? `<div class="mt-4 flex flex-wrap gap-2">${chip(armImb)}${chip(legImb)}</div>` : '');
@@ -1899,16 +1922,16 @@
       let change = '';
       if (vals.length >= 2) {
         const d = vals[vals.length - 1] - vals[0];
-        change = `<span class="text-[11px] font-bold text-gray-500">${d >= 0 ? '+' : ''}${d.toFixed(1)} kg since first</span>`;
+        change = `<span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500">${d >= 0 ? '+' : ''}${d.toFixed(1)} kg since first</span>`;
       }
-      return `<div class="py-2.5 border-b border-gray-100 last:border-0">
+      return `<div class="py-2.5 border-b border-gray-100 dark:border-white/5 last:border-0">
         <div class="flex items-baseline justify-between">
-          <span class="text-xs font-bold text-gray-600">${label}</span>
+          <span class="text-xs font-bold text-gray-600 dark:text-gray-300 dark:text-gray-600">${label}</span>
           <span class="text-sm font-extrabold" style="color:${color}">${vals.length ? vals[vals.length - 1].toFixed(1) + ' kg' : '—'}</span>
         </div>
         ${sparkline(vals, color)}
         <div class="flex justify-between mt-0.5">
-          <span class="text-[10px] text-gray-400">${vals.length} measurement${vals.length === 1 ? '' : 's'}</span>${change}
+          <span class="text-[10px] text-gray-400 dark:text-gray-500">${vals.length} measurement${vals.length === 1 ? '' : 's'}</span>${change}
         </div>
       </div>`;
     }).join('');
@@ -1918,23 +1941,23 @@
     const tbody = el('bodyHistoryBody');
     const rows = sortedBodyDesc();
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="px-4 py-10 text-center text-sm text-gray-400">No measurements yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="11" class="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">No measurements yet.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(b => `
-      <tr class="border-t border-gray-100 hover:bg-orange-50/40 transition-colors">
-        <td class="py-3 pr-4 whitespace-nowrap text-gray-700">${esc(fmtDateNice(b.date))}</td>
-        <td class="py-3 pr-4 font-bold text-gray-900">${fm(b.weightKg, 1)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.smmKg, 1)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.bfmKg, 1)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.pbf, 1)}%</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.bmi, 1)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.vfl, 0)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.whr, 2)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.tbwL, 1)}</td>
-        <td class="py-3 pr-4 text-gray-700">${fm(b.score, 0)}</td>
+      <tr class="border-t border-gray-100 dark:border-white/5 hover:bg-orange-50/40 dark:hover:bg-orange-500/10 transition-colors">
+        <td class="py-3 pr-4 whitespace-nowrap text-gray-700 dark:text-gray-300 dark:text-gray-600">${esc(fmtDateNice(b.date))}</td>
+        <td class="py-3 pr-4 font-bold text-gray-900 dark:text-white">${fm(b.weightKg, 1)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.smmKg, 1)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.bfmKg, 1)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.pbf, 1)}%</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.bmi, 1)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.vfl, 0)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.whr, 2)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.tbwL, 1)}</td>
+        <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${fm(b.score, 0)}</td>
         <td class="py-3 w-12">
-          <button data-del-body="${b.id}" title="Delete measurement" class="text-gray-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors">🗑</button>
+          <button data-del-body="${b.id}" title="Delete measurement" class="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">🗑</button>
         </td>
       </tr>`).join('');
   }
@@ -1966,8 +1989,8 @@
     pendingBodyRaw = fileName ? { name: fileName, text: String(text), dateLocal: rows.length ? isoDate(rows[rows.length - 1].date) : null } : null;   // dateLocal = latest scan date from INSIDE the CSV
     el('bodyParseName').textContent = fileName ? '· ' + fileName : '';
     el('bodyParseBody').innerHTML = rows.map(r => `
-      <tr class="border-t border-gray-100">
-        <td class="py-2 pr-4 text-gray-700 whitespace-nowrap">${esc(fmtDateNice(r.date))}</td>
+      <tr class="border-t border-gray-100 dark:border-white/5">
+        <td class="py-2 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600 whitespace-nowrap">${esc(fmtDateNice(r.date))}</td>
         <td class="py-2 pr-4 font-bold">${fm(r.weightKg, 1)} kg</td>
         <td class="py-2 pr-4">${fm(r.smmKg, 1)}</td>
         <td class="py-2 pr-4">${fm(r.bfmKg, 1)}</td>
@@ -2230,18 +2253,18 @@
 
   const FILES_EMPTY = `<div class="py-10 text-center">
       <div class="text-4xl">🗂️</div>
-      <p class="mt-3 font-bold text-gray-700">No cloud files yet</p>
-      <p class="text-sm text-gray-400 mt-1 max-w-md mx-auto">Free mode: fill in your GitHub repo below (see DEPLOY-FREE.md) — every upload and every emailed workout file is stored in your repo and downloadable here. Or deploy the optional Vercel backend (README-BACKEND.md).</p>
+      <p class="mt-3 font-bold text-gray-700 dark:text-gray-300 dark:text-gray-600">No cloud files yet</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 mt-1 max-w-md mx-auto">Free mode: fill in your GitHub repo below (see DEPLOY-FREE.md) — every upload and every emailed workout file is stored in your repo and downloadable here. Or deploy the optional Vercel backend (README-BACKEND.md).</p>
     </div>`;
 
   const fileRows = files => files.map(f => `
-                  <tr class="border-t border-gray-100 hover:bg-orange-50/40 transition-colors">
-                    <td class="py-3 pr-4 font-semibold text-gray-800 max-w-[260px] truncate" title="${esc(f.fileName)}">${esc(f.fileName)}</td>
-                    <td class="py-3 pr-4 text-gray-700 whitespace-nowrap">${f.dateLocal || '—'}</td>
-                    <td class="py-3 pr-4 text-gray-700">${esc(f.type || '—')}</td>
-                    <td class="py-3 pr-4 text-gray-500 whitespace-nowrap">${fmtBytes(f.sizeBytes || 0)}</td>
-                    <td class="py-3 pr-4"><span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-bold">${esc(f.source || '—')}</span></td>
-                    <td class="py-3 pr-4 text-gray-400 whitespace-nowrap">${f.storedAt ? fmtDateNice(f.storedAt) : '—'}</td>
+                  <tr class="border-t border-gray-100 dark:border-white/5 hover:bg-orange-50/40 dark:hover:bg-orange-500/10 transition-colors">
+                    <td class="py-3 pr-4 font-semibold text-gray-800 dark:text-gray-100 max-w-[260px] truncate" title="${esc(f.fileName)}">${esc(f.fileName)}</td>
+                    <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600 whitespace-nowrap">${f.dateLocal || '—'}</td>
+                    <td class="py-3 pr-4 text-gray-700 dark:text-gray-300 dark:text-gray-600">${esc(f.type || '—')}</td>
+                    <td class="py-3 pr-4 text-gray-500 dark:text-gray-400 dark:text-gray-500 whitespace-nowrap">${fmtBytes(f.sizeBytes || 0)}</td>
+                    <td class="py-3 pr-4"><span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 dark:text-gray-600 text-[11px] font-bold">${esc(f.source || '—')}</span></td>
+                    <td class="py-3 pr-4 text-gray-400 dark:text-gray-500 whitespace-nowrap">${f.storedAt ? fmtDateNice(f.storedAt) : '—'}</td>
                     <td class="py-3">
                       <button data-gh-path="${esc(f.path || '')}" data-file-id="${esc(f.id || '')}" data-file-name="${esc(f.fileName)}"
                               class="dlFileBtn inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#1b1b1c] hover:bg-black text-white text-xs font-bold transition-colors">⬇️ Save</button>
@@ -2252,7 +2275,7 @@
           <div class="overflow-x-auto -mx-2 px-2">
             <table class="w-full text-sm min-w-[720px]">
               <thead>
-                <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400">
+                <tr class="text-left text-[11px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   <th class="py-2 pr-4 font-semibold">File</th>
                   <th class="py-2 pr-4 font-semibold">Workout Date</th>
                   <th class="py-2 pr-4 font-semibold">Type</th>
@@ -2298,7 +2321,7 @@
     const box = el('filesBox');
     const mode = cloudMode();
     if (mode === 'none') { box.innerHTML = FILES_EMPTY; return; }
-    box.innerHTML = '<p class="text-sm text-gray-400 py-6 text-center">Loading cloud files…</p>';
+    box.innerHTML = '<p class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">Loading cloud files…</p>';
     const got = files => {
       if (!files || !files.length) { box.innerHTML = FILES_EMPTY; return; }
       box.innerHTML = FILES_TABLE(files.sort((a, b) => new Date(b.storedAt || 0) - new Date(a.storedAt || 0)));
@@ -2353,6 +2376,7 @@
       btn.classList.toggle('text-primary', on);
       btn.classList.toggle('border-primary', on);
       btn.classList.toggle('text-gray-500', !on);
+      btn.classList.toggle('dark:text-gray-400', !on);
       btn.classList.toggle('border-transparent', !on);
       btn.setAttribute('aria-selected', on ? 'true' : 'false');
     });
@@ -2382,11 +2406,11 @@
     // Upload: drag & drop + browse + manual entry
     const dz = el('dropzone'), fi = el('fileInput');
     dz.addEventListener('click', () => fi.click());
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-primary', 'bg-orange-50'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('border-primary', 'bg-orange-50'));
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10'));
     dz.addEventListener('drop', e => {
       e.preventDefault();
-      dz.classList.remove('border-primary', 'bg-orange-50');
+      dz.classList.remove('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10');
       handleFiles(e.dataTransfer.files);
     });
     fi.addEventListener('change', () => handleFiles(fi.files));
@@ -2407,11 +2431,11 @@
     // Body: InBody upload (drag & drop + browse), save parsed, manual entry, delete
     const bd = el('bodyDrop'), bf = el('bodyFile');
     bd.addEventListener('click', () => bf.click());
-    bd.addEventListener('dragover', e => { e.preventDefault(); bd.classList.add('border-primary', 'bg-orange-50'); });
-    bd.addEventListener('dragleave', () => bd.classList.remove('border-primary', 'bg-orange-50'));
+    bd.addEventListener('dragover', e => { e.preventDefault(); bd.classList.add('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10'); });
+    bd.addEventListener('dragleave', () => bd.classList.remove('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10'));
     bd.addEventListener('drop', e => {
       e.preventDefault();
-      bd.classList.remove('border-primary', 'bg-orange-50');
+      bd.classList.remove('border-primary', 'bg-orange-50', 'dark:bg-orange-500/10');
       handleBodyFiles(e.dataTransfer.files);
     });
     bf.addEventListener('change', () => handleBodyFiles(bf.files));
@@ -2500,6 +2524,19 @@
 
     // Cloud wiring: GitHub free mode (repo = database) or optional Vercel backend
     el('syncCloudBtn').addEventListener('click', () => syncFromCloud(true));
+
+    // Dark / light toggle — persisted, defaults to the system preference
+    const themeBtn = el('themeToggleBtn');
+    const isDark = () => !!(document.documentElement && document.documentElement.classList && document.documentElement.classList.contains('dark'));
+    const syncThemeIcon = () => { themeBtn.textContent = isDark() ? '☀️' : '🌙'; };
+    syncThemeIcon();
+    themeBtn.addEventListener('click', () => {
+      if (document.documentElement && document.documentElement.classList) {
+        document.documentElement.classList.toggle('dark');
+      }
+      try { localStorage.setItem('theme', isDark() ? 'dark' : 'light'); } catch { }
+      syncThemeIcon();
+    });
     el('filesRefreshBtn').addEventListener('click', () => renderFiles(true));
     el('ghSettingsSaveBtn').addEventListener('click', saveGhSettings);
     el('filesBox').addEventListener('click', e => {
