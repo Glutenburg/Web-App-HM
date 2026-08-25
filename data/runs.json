@@ -13230,5 +13230,21 @@
       118,
       117
     ]
+  },
+  {
+    "id": "mt89y65368guc",
+    "date": "2026-08-25T05:00:00.000Z",
+    "dateLocal": "2026-08-25",
+    "type": "Hills",
+    "distanceKm": 3.08,
+    "durationSec": 1967,
+    "hrAvg": 153,
+    "hrMax": 189,
+    "cadence": 110,
+    "tempC": 27.5,
+    "ascentM": 0,
+    "note": "",
+    "gps": [],
+    "hrSeries": []
   }
 ]
