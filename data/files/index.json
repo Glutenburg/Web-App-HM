@@ -23,6 +23,18 @@
       "type": "Hills",
       "relatedRecordId": "mt89y65368guc",
       "storedAt": "2026-08-25T06:18:58.702Z"
+    },
+    {
+      "id": "f_aa4xus",
+      "path": "data/files/f_aa4xus__suunto-27-08-2026.md",
+      "fileName": "suunto-27-08-2026.md",
+      "ext": "md",
+      "sizeBytes": 316852,
+      "source": "manual-ui",
+      "dateLocal": "2026-08-27",
+      "type": "Tempo",
+      "relatedRecordId": "mtat1hyxtkbat",
+      "storedAt": "2026-08-27T00:48:58.982Z"
     }
   ]
 }

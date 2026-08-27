@@ -13246,5 +13246,21 @@
     "note": "",
     "gps": [],
     "hrSeries": []
+  },
+  {
+    "id": "mtat1hyxtkbat",
+    "date": "2026-08-27T05:00:00.000Z",
+    "dateLocal": "2026-08-27",
+    "type": "Tempo",
+    "distanceKm": 2.89,
+    "durationSec": 1210,
+    "hrAvg": 178,
+    "hrMax": 206,
+    "cadence": 167,
+    "tempC": 31.3,
+    "ascentM": 4.6,
+    "note": "",
+    "gps": [],
+    "hrSeries": []
   }
 ]
