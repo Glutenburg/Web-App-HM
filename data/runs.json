@@ -13278,5 +13278,21 @@
     "note": "",
     "gps": [],
     "hrSeries": []
+  },
+  {
+    "id": "mtdyk1u5pdn67",
+    "date": "2026-08-29T05:00:00.000Z",
+    "dateLocal": "2026-08-29",
+    "type": "Long",
+    "distanceKm": 15,
+    "durationSec": 8631,
+    "hrAvg": 153,
+    "hrMax": 176,
+    "cadence": 150,
+    "tempC": 33.1,
+    "ascentM": 27,
+    "note": "",
+    "gps": [],
+    "hrSeries": []
   }
 ]
