@@ -13262,5 +13262,21 @@
     "note": "",
     "gps": [],
     "hrSeries": []
+  },
+  {
+    "id": "mtdxnf21rnp62",
+    "date": "2026-08-28T05:00:00.000Z",
+    "dateLocal": "2026-08-28",
+    "type": "Easy",
+    "distanceKm": 6.17,
+    "durationSec": 3660,
+    "hrAvg": 151,
+    "hrMax": 171,
+    "cadence": 141,
+    "tempC": 33,
+    "ascentM": 7.9,
+    "note": "",
+    "gps": [],
+    "hrSeries": []
   }
 ]

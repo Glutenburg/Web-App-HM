@@ -35,6 +35,18 @@
       "type": "Tempo",
       "relatedRecordId": "mtat1hyxtkbat",
       "storedAt": "2026-08-27T00:48:58.982Z"
+    },
+    {
+      "id": "f_1fu5apg",
+      "path": "data/files/f_1fu5apg__suunto-28-08-2026.md",
+      "fileName": "suunto-28-08-2026.md",
+      "ext": "md",
+      "sizeBytes": 901616,
+      "source": "manual-ui",
+      "dateLocal": "2026-08-28",
+      "type": "Easy",
+      "relatedRecordId": "mtdxnf21rnp62",
+      "storedAt": "2026-08-29T05:21:18.721Z"
     }
   ]
 }
